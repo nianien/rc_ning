@@ -1,0 +1,182 @@
+# Name Guard Configuration: 中文人名识别规则配置
+# 用于字幕翻译场景，宁可多判人名，也不要漏判
+
+# 总体策略
+strategy:
+  # 判定阈值：score >= threshold 则当人名处理
+  # 提高阈值以减少误判（默认 100，更保守）
+  threshold: 100
+  
+  # 强信号模式：必须命中至少一个强信号才算人名（提高精度）
+  require_strong_signal: true
+  
+  # 人名替换标记格式
+  name_placeholder_format: "<<NAME_{index}>>"
+  
+  # 人名渲染策略（MT 后）
+  # - "pinyin": 转换为拼音（如：平安 -> Ping An）
+  # - "keep": 保留中文（如：平安 -> Ping An 或直接保留）
+  render_strategy: "pinyin"
+
+# 规则配置（权重可调）
+rules:
+  # 规则 1: 称呼后缀规则（权重最高）
+  # 命中即几乎必然是人名
+  honorific_suffix:
+    enabled: true
+    weight: 100
+    patterns:
+      - "哥"
+      - "姐"
+      - "叔"
+      - "婶"
+      - "嫂子"
+      - "老师"
+      - "师傅"
+      - "大爷"
+      - "阿姨"
+      - "老"  # 老李、老王等
+  
+  # 规则 2: 呼唤位规则（权重很高）
+  # 出现在 utterance 开头或 <sep> 后第一个词
+  call_position:
+    enabled: true
+    weight: 80  # 提高权重，但只在真正的呼唤位才加分
+    # 检查位置：
+    # - utterance_start: utterance 开头
+    # - after_sep: <sep> 后第一个词
+    check_positions:
+      - "utterance_start"
+      - "after_sep"
+  
+  # 规则 3: 重复出现规则（权重高）
+  # 同一 utterance 内出现 >= min_occurrences 次
+  repetition:
+    enabled: true
+    weight: 40  # 提高权重
+    min_occurrences: 2  # 至少出现 2 次才加分
+  
+  # 规则 4: 词性排除规则（负权重）
+  # 如果一个词明显是动作/状态核心，则减分
+  pos_exclusion:
+    enabled: true
+    weight: -30  # 负权重
+    exclude_words:
+      - "到"
+      - "来"
+      - "走"
+      - "回"
+      - "看"
+      - "是"
+      - "有"
+      - "没"
+      - "了"
+      - "的"
+      - "在"
+      - "去"
+  
+  # 规则 5: 长度与结构规则（辅助）
+  length_structure:
+    enabled: true
+    weight: 10
+    # 更可能是人名的长度范围
+    preferred_lengths: [1, 2, 3]  # 1-3 个汉字
+    # 排除的结尾助词
+    exclude_endings:
+      - "了"
+      - "吗"
+      - "呢"
+      - "啊"
+      - "吧"
+
+# 强排除规则（闸门 1：命中直接判定"不是人名"）
+strong_exclusion:
+  # 语气词黑名单（单字和多字，直接丢弃）
+  interjections:
+    - "啊"
+    - "呃"
+    - "嗯"
+    - "哎"
+    - "哈"
+    - "嘿"
+    - "呦"
+    - "呢"
+    - "吧"
+    - "呀"
+    - "哈哈"  # 多字语气词
+    - "哈哈哈"
+    - "呵呵"
+    - "呵呵呵"
+  
+  # 祈使/动作短语模式（以这些动词开头且长度≥2，直接丢弃）
+  action_verbs:
+    - "去"
+    - "来"
+    - "走"
+    - "回"
+    - "找"
+    - "看"
+    - "拿"
+    - "放"
+    - "别"
+    - "让"
+    - "给"
+    - "把"
+    - "要"
+    - "能"
+    - "得"
+    - "慢"
+    - "快"
+    - "该"
+    - "接"
+    - "被"
+    - "当"
+    - "还"
+    - "都"
+  
+  # 含明显语法功能词（直接丢弃）
+  pronouns:
+    - "我"
+    - "你"
+    - "他"
+    - "她"
+    - "它"
+    - "我们"
+    - "你们"
+    - "他们"
+  
+  # 数字/量词短语（直接丢弃）
+  numbers_quantifiers:
+    - "十"
+    - "百"
+    - "千"
+    - "万"
+    - "条"
+    - "张"
+    - "个"
+    - "岁"
+    - "三"
+    - "二"
+    - "一"
+  
+  # 亲属称呼/角色（默认不当专名，可选保护）
+  # 注意：这些应该走 Honorific Guard，不是 Name Guard
+  kinship_roles:
+    - "媳妇"
+    - "嫂子"
+    - "你嫂子"
+    - "我嫂子"
+    - "他嫂子"
+
+# 特殊处理
+special:
+  # 已知人名列表（白名单，直接判定为人名）
+  known_names:
+    - "平安"
+    - "张三"
+    - "李四"
+    # 可以在这里添加已知人名
+  
+  # 已知非人名列表（黑名单，直接排除）
+  exclude_names: []
+    # 注意：黑名单优先级低于白名单

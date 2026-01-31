@@ -1,0 +1,111 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: notification-api
+  profiles:
+    active: mock  # 默认使用mock模式
+
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # Jackson配置
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.example.notification: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+---
+# Mock模式配置（本地测试）
+spring:
+  config:
+    activate:
+      on-profile: mock
+
+  # H2内存数据库
+  datasource:
+    url: jdbc:h2:mem:notification;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # 使用嵌入式Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# Mock配置
+mock:
+  failure-rate: 20  # 20%的失败率
+  delay-ms: 100     # 模拟延迟100ms
+
+---
+# 生产模式配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+logging:
+  level:
+    com.example.notification: INFO

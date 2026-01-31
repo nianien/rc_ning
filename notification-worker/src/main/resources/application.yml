@@ -1,0 +1,100 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: notification-worker
+  profiles:
+    active: mock  # 默认使用mock模式
+
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.example.notification: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Worker配置
+notification:
+  worker:
+    concurrency: 4           # Worker并发数
+    poll-timeout-seconds: 5  # 队列拉取超时
+  delivery:
+    connect-timeout-ms: 5000  # 连接超时
+    read-timeout-ms: 30000    # 读取超时
+    timeout-seconds: 30       # 整体超时
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+---
+# Mock模式配置（本地测试）
+spring:
+  config:
+    activate:
+      on-profile: mock
+
+  # H2内存数据库
+  datasource:
+    url: jdbc:h2:mem:notification;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # 使用嵌入式Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+---
+# 生产模式配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+notification:
+  worker:
+    concurrency: 8  # 生产环境增加并发
+
+logging:
+  level:
+    com.example.notification: INFO
